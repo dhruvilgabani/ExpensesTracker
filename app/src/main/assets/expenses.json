@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "description": "Groceries",
+    "amount": 45.50,
+    "date": "2025-05-01",
+    "category": "Food"
+  },
+  {
+    "id": 2,
+    "description": "Electricity Bill",
+    "amount": 120.00,
+    "date": "2025-05-02",
+    "category": "Utilities"
+  },
+  {
+    "id": 3,
+    "description": "Car Tickets",
+    "amount": 30.00,
+    "date": "2025-05-03",
+    "category": "Transportation"
+  },
+  {
+    "id": 4,
+    "description": "Gas Station",
+    "amount": 60.00,
+    "date": "2025-05-04",
+    "category": "Transportation"
+  },
+  {
+    "id": 5,
+    "description": "Restaurant",
+    "amount": 75.25,
+    "date": "2025-05-04",
+    "category": "Food"
+  }
+]

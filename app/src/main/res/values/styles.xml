@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Color definitions -->
+    <color name="blue_500">#FF2196F3</color> <!-- Primary: Vibrant Blue -->
+    <color name="blue_700">#FF1976D2</color> <!-- Primary Variant: Darker Blue -->
+    <color name="orange_200">#FFFFA726</color> <!-- Secondary: Bright Orange -->
+    <color name="orange_700">#FFF57C00</color> <!-- Secondary Variant: Darker Orange -->
+    <color name="white">#FFFFFFFF</color> <!-- Text/Icons on Primary -->
+    <color name="black">#FF000000</color> <!-- Text/Icons on Secondary -->
+
+    <!-- Theme definition -->
+    <style name="Theme.ExpensesApp" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/blue_500</item>
+        <item name="colorPrimaryVariant">@color/blue_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/orange_200</item>
+        <item name="colorSecondaryVariant">@color/orange_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+    </style>
+</resources>
