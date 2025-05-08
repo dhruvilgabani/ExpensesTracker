@@ -3,42 +3,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/white">
-
+    android:padding="16dp">
     <ListView
         android:id="@+id/expenseListView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:divider="@color/blue_700"
+        android:divider="@android:color/darker_gray"
         android:dividerHeight="1dp" />
-
-    <LinearLayout
+    <Button
+        android:id="@+id/addExpenseButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/addExpenseButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Add Expense"
-            android:backgroundTint="@color/orange_200"
-            android:textColor="@color/black"
-            android:layout_marginEnd="8dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/viewStatsButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="View Stats"
-            android:backgroundTint="@color/orange_200"
-            android:textColor="@color/black"
-            android:layout_marginStart="8dp" />
-
-    </LinearLayout>
+        android:text="Add Expense"
+        android:layout_marginTop="16dp" />
+    <Button
+        android:id="@+id/viewStatsButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Statistics"
+        android:layout_marginTop="8dp" />
 </LinearLayout>
