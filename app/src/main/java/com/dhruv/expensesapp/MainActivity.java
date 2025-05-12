@@ -1,138 +1,231 @@
 package com.dhruv.expensesapp;
 
+import android.Manifest;
+import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Parcel;
-import android.os.Parcelable;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Spinner;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.button.MaterialButton;
-import java.util.ArrayList;
+import androidx.appcompat.widget.SearchView;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import java.util.Calendar;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private ListView expenseListView;
-    private ArrayAdapter<Expense> expenseAdapter;
-    private List<Expense> expenseList;
+    private RecyclerView recyclerView;
+    private ExpenseAdapter adapter;
     private DatabaseHelper dbHelper;
+    private FloatingActionButton fab;
+    private static final int REQUEST_CODE_DETAIL = 1;
+    private ActivityResultLauncher<String[]> permissionLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Initialize views
-        expenseListView = findViewById(R.id.expenseListView);
-        MaterialButton addExpenseButton = findViewById(R.id.addExpenseButton);
-        MaterialButton viewStatsButton = findViewById(R.id.viewStatsButton);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+            getSupportActionBar().setTitle("Expenses App");
+        }
 
-        // Initialize database and expense list
+        recyclerView = findViewById(R.id.recyclerView);
+        fab = findViewById(R.id.fab);
         dbHelper = new DatabaseHelper(this);
-        expenseList = new ArrayList<>();
-        expenseAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_list_item_1,
-                expenseList
-        );
-        expenseListView.setAdapter(expenseAdapter);
 
-        // Load data from SQLite
-        loadExpenseData();
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        List<Expense> expenses = dbHelper.getAllExpenses();
+        Log.d("MainActivity", "Expenses loaded: " + expenses.size());
+        adapter = new ExpenseAdapter(expenses, this);
+        recyclerView.setAdapter(adapter);
 
-        // Set up button listeners
-        addExpenseButton.setOnClickListener(v -> {
+        fab.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddExpenseActivity.class);
-            startActivityForResult(intent, 1);
-        });
-
-        viewStatsButton.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, StatsActivity.class);
             startActivity(intent);
         });
 
-        // Set up ListView item click listener
-        expenseListView.setOnItemClickListener((parent, view, position, id) -> {
-            Expense expense = expenseList.get(position);
-            Intent intent = new Intent(MainActivity.this, ExpenseDetailActivity.class);
-            intent.putExtra("expense", expense);
-            startActivityForResult(intent, 2);
+        // Initialize permission launcher
+        permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+            if (result.getOrDefault(Manifest.permission.POST_NOTIFICATIONS, false) &&
+                    result.getOrDefault(Manifest.permission.WRITE_EXTERNAL_STORAGE, false)) {
+                RecurringWorker.scheduleWork(this);
+            }
         });
+
+        // Request permissions
+        requestPermissions();
+    }
+
+    private void requestPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            String[] permissions = {
+                    Manifest.permission.POST_NOTIFICATIONS,
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(permissions);
+            } else {
+                RecurringWorker.scheduleWork(this);
+            }
+        } else {
+            String[] permissions = {
+                    Manifest.permission.READ_EXTERNAL_STORAGE,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(permissions);
+            } else {
+                RecurringWorker.scheduleWork(this);
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        List<Expense> expenses = dbHelper.getAllExpenses();
+        Log.d("MainActivity", "Expenses onResume: " + expenses.size());
+        adapter.updateData(expenses);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if ((requestCode == 1 || requestCode == 2) && resultCode == RESULT_OK) {
-            loadExpenseData();
+        if (requestCode == REQUEST_CODE_DETAIL && resultCode == RESULT_OK) {
+            List<Expense> expenses = dbHelper.getAllExpenses();
+            adapter.updateData(expenses);
         }
     }
 
-    private void loadExpenseData() {
-        expenseList.clear();
-        expenseList.addAll(dbHelper.getAllExpenses());
-        expenseAdapter.notifyDataSetChanged();
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+        searchView.setQueryHint("Search expenses...");
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                adapter.getFilter().filter(newText);
+                return true;
+            }
+        });
+
+        return true;
     }
 
-    // Expense model class
-    public static class Expense implements Parcelable {
-        private int id;
-        private String description;
-        private double amount;
-        private String date;
-        private String category;
-
-        public Expense(int id, String description, double amount, String date, String category) {
-            this.id = id;
-            this.description = description;
-            this.amount = amount;
-            this.date = date;
-            this.category = category;
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_stats) {
+            startActivity(new Intent(this, StatsActivity.class));
+            return true;
+        } else if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        } else if (id == R.id.action_export) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                dbHelper.exportToCSV(this);
+            } else {
+                permissionLauncher.launch(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE});
+            }
+            return true;
+        } else if (id == R.id.action_import) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                dbHelper.importFromCSV(this);
+            } else {
+                permissionLauncher.launch(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE});
+            }
+            return true;
+        } else if (id == R.id.action_filter) {
+            showFilterDialog();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
+    }
 
-        protected Expense(Parcel in) {
-            id = in.readInt();
-            description = in.readString();
-            amount = in.readDouble();
-            date = in.readString();
-            category = in.readString();
-        }
+    private void showFilterDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_filter, null);
+        Spinner spinnerType = dialogView.findViewById(R.id.spinnerType);
+        Spinner spinnerCategory = dialogView.findViewById(R.id.spinnerCategory);
+        EditText etStartDate = dialogView.findViewById(R.id.etStartDate);
+        EditText etEndDate = dialogView.findViewById(R.id.etEndDate);
+        Button btnApply = dialogView.findViewById(R.id.btnApply);
 
-        public static final Creator<Expense> CREATOR = new Creator<Expense>() {
-            @Override
-            public Expense createFromParcel(Parcel in) {
-                return new Expense(in);
+        String[] types = {"All", "Income", "Expense"};
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, types);
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerType.setAdapter(typeAdapter);
+
+        List<String> categories = dbHelper.getAllCategories();
+        categories.add(0, "All");
+        ArrayAdapter<String> categoryAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
+        categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerCategory.setAdapter(categoryAdapter);
+
+        etStartDate.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, day) -> {
+                etStartDate.setText(String.format("%d-%02d-%02d", year, month + 1, day));
+            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+            dialog.show();
+        });
+
+        etEndDate.setOnClickListener(v -> {
+            Calendar calendar = Calendar.getInstance();
+            DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, day) -> {
+                etEndDate.setText(String.format("%d-%02d-%02d", year, month + 1, day));
+            }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+            dialog.show();
+        });
+
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+
+        btnApply.setOnClickListener(v -> {
+            String type = spinnerType.getSelectedItem().toString();
+            String category = spinnerCategory.getSelectedItem().toString();
+            String startDate = etStartDate.getText().toString().trim();
+            String endDate = etEndDate.getText().toString().trim();
+
+            if (type.equals("All")) type = null;
+            if (category.equals("All")) category = null;
+            if (startDate.isEmpty() || endDate.isEmpty()) {
+                startDate = null;
+                endDate = null;
             }
 
-            @Override
-            public Expense[] newArray(int size) {
-                return new Expense[size];
-            }
-        };
+            List<Expense> filtered = dbHelper.getFilteredExpenses(type, startDate, endDate, category);
+            adapter.updateData(filtered);
+            dialog.dismiss();
+        });
 
-        @Override
-        public int describeContents() {
-            return 0;
-        }
-
-        @Override
-        public void writeToParcel(Parcel dest, int flags) {
-            dest.writeInt(id);
-            dest.writeString(description);
-            dest.writeDouble(amount);
-            dest.writeString(date);
-            dest.writeString(category);
-        }
-
-        @Override
-        public String toString() {
-            return description + " - $" + amount + " (" + category + ")";
-        }
-
-        public int getId() { return id; }
-        public String getDescription() { return description; }
-        public double getAmount() { return amount; }
-        public String getDate() { return date; }
-        public String getCategory() { return category; }
+        dialog.show();
     }
 }

@@ -1,19 +1,17 @@
 <resources>
-    <string name="app_name">Lab1Act</string>
-    <string name="action_settings">Settings</string>
-
-    <string name="expense_statistics">Expense Statistics</string>
-    <string name="charts_placeholder">(Charts will appear here)</string>
-    <!-- Strings for Expense Tracker main screen -->
-    <string name="expense_tracker_title">Expense Tracker</string>
-    <string name="all_expenses">All Expenses</string>
-    <string name="add_expense">Add Expense</string>
-    <string name="view_stats">View Stats</string>
-    <!-- Strings for Add Expense screen -->
-
-    <string name="add_new_expense">Add New Expense</string>
-    <string name="amount_hint">Amount (e.g. ₹100)</string>
-    <string name="category_hint">Category (e.g. Food, Travel)</string>
-    <string name="save_expense">Save Expense</string>
-
+    <string name="app_name">ExpensesApp</string>
+    <string name="category_prompt">Select Category</string>
+    <string name="type_prompt">Select Type</string>
+    <string-array name="transaction_types">
+        <item>Expense</item>
+        <item>Income</item>
+    </string-array>
+    <string-array name="categories">
+        <item>Food</item>
+        <item>Transport</item>
+        <item>Entertainment</item>
+        <item>Bills</item>
+        <item>Salary</item>
+        <item>Other</item>
+    </string-array>
 </resources>
